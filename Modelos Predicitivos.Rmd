@@ -1,0 +1,61 @@
+---
+title: "Aplicacion de Remuestreo"
+author: "Axel Caro"
+output: word_document
+---
+
+# Carga de paquetes
+
+```{r}
+# install.packages("pacman")
+# install.packages("bsts")
+pacman::p_load(readxl, bsts)
+```
+
+# Carga de la base de datos
+
+```{r}
+library(readxl)
+Base_TRM <- read_excel("C:/Users/sala203/Downloads/Base TRM.xlsx")
+View(Base_TRM)
+```
+
+# Generar un modelo de prueba
+
+```{r}
+Base_1 <- Base_TRM
+n__test <- 0
+X <- as.numeric(length(Base_1$TRM)) - n__test
+X1 <- X + n__test
+base_1 <- Base_1[-c(X:X1),]
+d_prueba <- Base_1[c(X:X1),]
+# Se particiona la base de datos
+
+ss1 <- AddLocalLinearTrend(list(), Base_1$TRM)
+#ss1 <- AddSeasonal(ss1, Base_1, nseasons = 2) # Si se cuenta con una base suficientemente grande la estacionalidad me indica periodos repetitivos en el tiempo y se prueba varian de 2 hasta 12
+modelo1 <- bsts(Base_1$TRM, state.specification = ss1, niter = 1000) # El numero de iteraciones se puede variar entre 10 y 10 millones de 1 en 1
+pred1 <- predict(modelo1, horizon = n__test+1, burn = 10*0.01) # En el burn se varia desde 0.01 hasta 0.1
+obs <- d_prueba$TRM
+pronosticos <- pred1$mean # se puede generar por media (mean) o por la mediana (median)
+obs;pronosticos # Comparo el dato real contra el dato pronosticado (Es una revision a ojo)
+MAPE <- 100*(mean(abs(pronosticos-obs)/obs)); MAPE
+
+```
+
+# Pronostico hacia adelante
+
+```{r}
+ss1 <- AddLocalLinearTrend(list(), Base_1$TRM)
+
+modelo1 <- bsts(Base_TRM$TRM, state.specification = ss1, niter = 1000) # Usar la base original
+
+predFinal <- predict(modelo1, horizon = 10, burn = 10*0.01) # Pronostico con 1 paso adelante
+pronostico <- predFinal$mean
+round(pronostico,3)
+```
+
+* Evitar realizar pronosticos a largo plazo. Siempre realizar pronosticos a corto plazo.
+* Se puede realizar con variables de tipo discreto o continuo
+* se puede agregar covariables numericas
+* se puede agregar una variable de sentimiento (Como reaccion la variable en estudio ante noticias que la pueden afectar)
+* Pronostico de ataques a servidores
